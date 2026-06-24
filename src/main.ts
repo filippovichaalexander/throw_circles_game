@@ -1,6 +1,7 @@
+import type { ArenaSize } from './types';
 import './styles.css';
 
-function computeArenaSize(): { width: number; height: number } {
+function computeArenaSize(): ArenaSize {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const aspect = 4 / 3;
