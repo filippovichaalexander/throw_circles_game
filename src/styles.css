@@ -1,0 +1,71 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-1: #1a1a2e;
+  --bg-2: #16213e;
+  --accent: #0f3460;
+  --text: #eaeaea;
+  --radius: 10px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--accent));
+}
+
+#app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 16px 20px;
+}
+
+.header h1 {
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px 16px;
+}
+
+.arena-wrap {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  min-width: 280px;
+  min-height: 210px;
+}
+
+#arena {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.error {
+  padding: 24px;
+  color: #ff6b6b;
+  text-align: center;
+}
