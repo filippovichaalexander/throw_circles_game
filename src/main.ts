@@ -1,4 +1,5 @@
-import { createCircle, stepSimulation } from './physics';
+import { InputController } from './input';
+import { createCircle, freezeCircles, stepSimulation, unfreezeCircles } from './physics';
 import { WebGLRenderer } from './renderer';
 import type { AppMode, ArenaSize, Circle } from './types';
 import { MAX_CIRCLES, MIN_CIRCLES, PALETTE } from './types';
@@ -26,9 +27,11 @@ class App {
   private wrap: HTMLElement;
   private renderer: WebGLRenderer;
   private ui: UIElements;
+  private input: InputController;
   private circles: Circle[] = [];
   private nextId = 1;
   private mode: AppMode = 'simulation';
+  private selectedId: number | null = null;
   private arena: ArenaSize = { width: 800, height: 600 };
   private lastTime = 0;
 
@@ -47,6 +50,31 @@ class App {
       onPaletteClear: () => {},
       hasPendingPaletteColor: () => false,
       onTransparent: () => {},
+    });
+
+    this.input = new InputController(this.canvas, {
+      onSelect: (id) => {
+        this.selectedId = id;
+        this.refreshSelectionUI();
+      },
+      onDragStart: (id) => {
+        const circle = this.circles.find((c) => c.id === id);
+        if (circle) {
+          circle.vx = 0;
+          circle.vy = 0;
+        }
+      },
+      onDragMove: (id, x, y) => {
+        const circle = this.circles.find((c) => c.id === id);
+        if (circle) {
+          circle.x = x;
+          circle.y = y;
+        }
+      },
+      getMode: () => this.mode,
+      getCircles: () => this.circles,
+      getSelectedId: () => this.selectedId,
+      getArena: () => this.arena,
     });
 
     updateHintUI(this.ui, this.mode);
@@ -74,7 +102,7 @@ class App {
   private refreshSelectionUI(): void {
     updateSelectionUI(
       this.ui,
-      null,
+      this.selectedId,
       this.circles.length,
       MIN_CIRCLES,
       MAX_CIRCLES,
@@ -97,6 +125,11 @@ class App {
   private setMode(mode: AppMode): void {
     if (this.mode === mode) return;
     this.mode = mode;
+    if (mode === 'edit') {
+      freezeCircles(this.circles);
+    } else {
+      unfreezeCircles(this.circles);
+    }
     updateHintUI(this.ui, mode);
   }
 
@@ -106,10 +139,12 @@ class App {
 
     if (this.mode === 'simulation') {
       stepSimulation(this.circles, this.arena, dt);
+    } else {
+      this.input.update(dt);
     }
 
     this.renderer.clear();
-    this.renderer.draw(this.circles, null);
+    this.renderer.draw(this.circles, this.selectedId);
 
     requestAnimationFrame((t) => this.loop(t));
   }

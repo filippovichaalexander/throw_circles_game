@@ -1,5 +1,79 @@
 import type { Circle } from './types';
 
+export function circlesOverlap(a: Circle, b: Circle, gap = 0): boolean {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const distSq = dx * dx + dy * dy;
+  const minDist = a.radius + b.radius + gap;
+  return distSq < minDist * minDist;
+}
+
+export function isInsideBounds(
+  x: number,
+  y: number,
+  radius: number,
+  width: number,
+  height: number,
+): boolean {
+  return (
+    x - radius >= 0 &&
+    x + radius <= width &&
+    y - radius >= 0 &&
+    y + radius <= height
+  );
+}
+
+export function canPlaceAt(
+  circle: Circle,
+  x: number,
+  y: number,
+  others: Circle[],
+  width: number,
+  height: number,
+): boolean {
+  if (!isInsideBounds(x, y, circle.radius, width, height)) {
+    return false;
+  }
+
+  const probe: Circle = { ...circle, x, y };
+  for (const other of others) {
+    if (other.id === circle.id) continue;
+    if (circlesOverlap(probe, other)) return false;
+  }
+  return true;
+}
+
+export function resolveMovement(
+  circle: Circle,
+  dx: number,
+  dy: number,
+  others: Circle[],
+  width: number,
+  height: number,
+): { x: number; y: number } {
+  const cx = circle.x + dx;
+  const cy = circle.y + dy;
+  if (canPlaceAt(circle, cx, cy, others, width, height)) {
+    return { x: cx, y: cy };
+  }
+
+  const nx = circle.x + dx;
+  if (canPlaceAt(circle, nx, circle.y, others, width, height)) {
+    return { x: nx, y: circle.y };
+  }
+
+  const ny = circle.y + dy;
+  if (canPlaceAt(circle, circle.x, ny, others, width, height)) {
+    return { x: circle.x, y: ny };
+  }
+
+  return { x: circle.x, y: circle.y };
+}
+
+export function circleSpeed(circle: Circle): number {
+  return Math.hypot(circle.vx, circle.vy);
+}
+
 export function resolveCircleCollision(a: Circle, b: Circle): void {
   const dx = b.x - a.x;
   const dy = b.y - a.y;

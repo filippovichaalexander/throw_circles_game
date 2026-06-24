@@ -80,7 +80,24 @@ export function createCircle(
 
   return { id, x, y, vx, vy, radius: r, r: color.r, g: color.g, b: color.b, a: 1 };
 }
-// TODO fix 
+
+export function freezeCircles(circles: Circle[]): void {
+  for (const c of circles) {
+    c.vx = 0;
+    c.vy = 0;
+  }
+}
+
+export function unfreezeCircles(circles: Circle[]): void {
+  for (const c of circles) {
+    if (c.vx === 0 && c.vy === 0) {
+      const v = randomVelocity();
+      c.vx = v.vx;
+      c.vy = v.vy;
+    }
+  }
+}
+
 export function stepSimulation(circles: Circle[], arena: ArenaSize, dt: number): void {
   const subDt = dt / SUBSTEPS;
 
