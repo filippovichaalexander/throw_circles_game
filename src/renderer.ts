@@ -57,6 +57,8 @@ void main() {
   float innerBorder = 1.0 - smoothstep(1.0 - borderNorm - aaNorm, 1.0 - borderNorm, dist);
   float borderMask = clamp(outerBorder - innerBorder, 0.0, 1.0);
 
+  // TODO transparency
+
   if (v_selected > 0.5) {
     float selectedBorderPx = 4.0;
     float selectedBorderNorm = selectedBorderPx / radius;

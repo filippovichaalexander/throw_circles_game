@@ -1,8 +1,8 @@
-import './types';
-import './styles.css';
-
-import type { ArenaSize, Circle } from './types';
+import { createCircle, stepSimulation } from './physics';
 import { WebGLRenderer } from './renderer';
+import type { ArenaSize, Circle } from './types';
+import { MIN_CIRCLES, PALETTE } from './types';
+import './styles.css';
 
 function computeArenaSize(): ArenaSize {
   const vw = window.innerWidth;
@@ -19,45 +19,6 @@ function computeArenaSize(): ArenaSize {
     height: Math.max(240, height),
   };
 }
-
-const DEMO_CIRCLES: Circle[] = [
-  {
-    id: 1,
-    x: 180,
-    y: 140,
-    vx: 0,
-    vy: 0,
-    radius: 42,
-    r: 0.92,
-    g: 0.26,
-    b: 0.21,
-    a: 1,
-  },
-  {
-    id: 2,
-    x: 380,
-    y: 190,
-    vx: 0,
-    vy: 0,
-    radius: 30,
-    r: 0.13,
-    g: 0.59,
-    b: 0.95,
-    a: 1,
-  },
-  {
-    id: 3,
-    x: 540,
-    y: 110,
-    vx: 0,
-    vy: 0,
-    radius: 24,
-    r: 0.3,
-    g: 0.69,
-    b: 0.31,
-    a: 0.5,
-  },
-];
 
 function main(): void {
   const canvas = document.getElementById('arena') as HTMLCanvasElement | null;
@@ -76,18 +37,46 @@ function main(): void {
     return;
   }
 
+  const circles: Circle[] = [];
+  let nextId = 1;
+  let arena: ArenaSize = { width: 800, height: 600 };
+  let lastTime = performance.now();
+
+  const seedCircles = (count: number): void => {
+    circles.length = 0;
+    for (let i = 0; i < count; i++) {
+      circles.push(createCircle(nextId++, arena, i % PALETTE.length));
+    }
+  };
+
   const resize = (): void => {
-    const arena = computeArenaSize();
+    arena = computeArenaSize();
     wrap.style.width = `${arena.width}px`;
     wrap.style.height = `${arena.height}px`;
     const dpr = window.devicePixelRatio || 1;
     renderer.resize(arena.width, arena.height, dpr);
+
+    for (const c of circles) {
+      c.x = Math.min(Math.max(c.x, c.radius), arena.width - c.radius);
+      c.y = Math.min(Math.max(c.y, c.radius), arena.height - c.radius);
+    }
+  };
+
+  const loop = (now: number): void => {
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+
+    stepSimulation(circles, arena, dt);
     renderer.clear();
-    renderer.draw(DEMO_CIRCLES, 2);
+    renderer.draw(circles, null);
+
+    requestAnimationFrame(loop);
   };
 
   window.addEventListener('resize', resize);
   resize();
+  seedCircles(MIN_CIRCLES);
+  requestAnimationFrame(loop);
 }
 
 main();
