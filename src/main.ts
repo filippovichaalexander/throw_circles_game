@@ -1,7 +1,8 @@
 import { createCircle, stepSimulation } from './physics';
 import { WebGLRenderer } from './renderer';
-import type { ArenaSize, Circle } from './types';
-import { MIN_CIRCLES, PALETTE } from './types';
+import type { AppMode, ArenaSize, Circle } from './types';
+import { MAX_CIRCLES, MIN_CIRCLES, PALETTE } from './types';
+import { bindUI, updateHintUI, updateSelectionUI, type UIElements } from './ui';
 import './styles.css';
 
 function computeArenaSize(): ArenaSize {
@@ -20,63 +21,107 @@ function computeArenaSize(): ArenaSize {
   };
 }
 
-function main(): void {
-  const canvas = document.getElementById('arena') as HTMLCanvasElement | null;
-  const wrap = document.getElementById('arena-wrap') as HTMLElement | null;
-  if (!canvas || !wrap) {
-    document.body.innerHTML = '<p class="error">Не удалось найти canvas</p>';
-    return;
+class App {
+  private canvas: HTMLCanvasElement;
+  private wrap: HTMLElement;
+  private renderer: WebGLRenderer;
+  private ui: UIElements;
+  private circles: Circle[] = [];
+  private nextId = 1;
+  private mode: AppMode = 'simulation';
+  private arena: ArenaSize = { width: 800, height: 600 };
+  private lastTime = 0;
+
+  constructor() {
+    this.canvas = document.getElementById('arena') as HTMLCanvasElement;
+    this.wrap = document.getElementById('arena-wrap') as HTMLElement;
+    this.renderer = new WebGLRenderer(this.canvas);
+
+    this.ui = bindUI({
+      onModeChange: (mode) => this.setMode(mode),
+      onAdd: () => {},
+      onDelete: () => {},
+      onGrow: () => {},
+      onShrink: () => {},
+      onPaletteToggle: () => {},
+      onPaletteClear: () => {},
+      hasPendingPaletteColor: () => false,
+      onTransparent: () => {},
+    });
+
+    updateHintUI(this.ui, this.mode);
+    this.refreshSelectionUI();
+
+    window.addEventListener('resize', () => this.handleResize());
+    this.handleResize();
+    this.seedCircles(MIN_CIRCLES);
+    this.lastTime = performance.now();
+    requestAnimationFrame((t) => this.loop(t));
   }
 
-  let renderer: WebGLRenderer;
-  try {
-    renderer = new WebGLRenderer(canvas);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'WebGL2 недоступен';
-    document.body.innerHTML = `<p class="error">${message}</p>`;
-    return;
-  }
-
-  const circles: Circle[] = [];
-  let nextId = 1;
-  let arena: ArenaSize = { width: 800, height: 600 };
-  let lastTime = performance.now();
-
-  const seedCircles = (count: number): void => {
-    circles.length = 0;
+  private seedCircles(count: number): void {
+    this.circles = [];
     for (let i = 0; i < count; i++) {
-      circles.push(createCircle(nextId++, arena, i % PALETTE.length));
+      const circle = createCircle(this.nextId++, this.arena, i % PALETTE.length);
+      if (i === 2) {
+        circle.a = 0.5;
+      }
+      this.circles.push(circle);
     }
-  };
+    this.refreshSelectionUI();
+  }
 
-  const resize = (): void => {
-    arena = computeArenaSize();
-    wrap.style.width = `${arena.width}px`;
-    wrap.style.height = `${arena.height}px`;
+  private refreshSelectionUI(): void {
+    updateSelectionUI(
+      this.ui,
+      null,
+      this.circles.length,
+      MIN_CIRCLES,
+      MAX_CIRCLES,
+    );
+  }
+
+  private handleResize(): void {
+    this.arena = computeArenaSize();
+    this.wrap.style.width = `${this.arena.width}px`;
+    this.wrap.style.height = `${this.arena.height}px`;
     const dpr = window.devicePixelRatio || 1;
-    renderer.resize(arena.width, arena.height, dpr);
+    this.renderer.resize(this.arena.width, this.arena.height, dpr);
 
-    for (const c of circles) {
-      c.x = Math.min(Math.max(c.x, c.radius), arena.width - c.radius);
-      c.y = Math.min(Math.max(c.y, c.radius), arena.height - c.radius);
+    for (const c of this.circles) {
+      c.x = Math.min(Math.max(c.x, c.radius), this.arena.width - c.radius);
+      c.y = Math.min(Math.max(c.y, c.radius), this.arena.height - c.radius);
     }
-  };
+  }
 
-  const loop = (now: number): void => {
-    const dt = Math.min((now - lastTime) / 1000, 0.05);
-    lastTime = now;
+  private setMode(mode: AppMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    updateHintUI(this.ui, mode);
+  }
 
-    stepSimulation(circles, arena, dt);
-    renderer.clear();
-    renderer.draw(circles, null);
+  private loop(now: number): void {
+    const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+    this.lastTime = now;
 
-    requestAnimationFrame(loop);
-  };
+    if (this.mode === 'simulation') {
+      stepSimulation(this.circles, this.arena, dt);
+    }
 
-  window.addEventListener('resize', resize);
-  resize();
-  seedCircles(MIN_CIRCLES);
-  requestAnimationFrame(loop);
+    this.renderer.clear();
+    this.renderer.draw(this.circles, null);
+
+    requestAnimationFrame((t) => this.loop(t));
+  }
+}
+
+function main(): void {
+  try {
+    new App();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    document.body.innerHTML = `<p class="error">Ошибка запуска: ${message}</p>`;
+  }
 }
 
 main();

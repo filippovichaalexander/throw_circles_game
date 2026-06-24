@@ -10,6 +10,14 @@
     <div id="app">
       <header class="header">
         <h1>Симуляция кругов</h1>
+        <div class="mode-switch">
+          <button type="button" id="btn-mode-sim" class="mode-btn active" data-mode="simulation">
+            Симуляция
+          </button>
+          <button type="button" id="btn-mode-edit" class="mode-btn" data-mode="edit">
+            Редактирование
+          </button>
+        </div>
       </header>
 
       <main class="main">
@@ -17,6 +25,29 @@
           <canvas id="arena" aria-label="Игровая область"></canvas>
         </div>
       </main>
+
+      <footer class="footer">
+        <div class="footer-group">
+          <button type="button" id="btn-add">Добавить</button>
+          <button type="button" id="btn-delete" disabled>Удалить</button>
+          <button type="button" id="btn-grow" disabled>Увеличить</button>
+          <button type="button" id="btn-shrink" disabled>Уменьшить</button>
+        </div>
+
+        <div class="footer-group palette" id="palette" aria-label="Палитра цветов">
+          <span class="label">Цвет нового:</span>
+          <button
+            type="button"
+            id="btn-transparent"
+            class="swatch swatch-transparent"
+            disabled
+            title="Прозрачный"
+            aria-label="Прозрачный"
+          ></button>
+        </div>
+
+        <p class="hint" id="hint">Просто смотри как красиво они движутся</p>
+      </footer>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
