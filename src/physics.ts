@@ -1,4 +1,5 @@
 import {
+  canPlaceAt,
   circleSpeed,
   resolveCircleCollision,
   resolveCircleCollisionAgainstStatic,
@@ -6,7 +7,7 @@ import {
   resolveWallCollisionBounce,
 } from './collision';
 import type { ArenaSize, Circle } from './types';
-import { MAX_RADIUS, MIN_RADIUS, PALETTE } from './types';
+import { PALETTE } from './types';
 
 const TARGET_SPEED = 130;
 const MIN_SPEED = 85;
@@ -15,15 +16,87 @@ const STEER_STRENGTH = 1.4;
 const SPEED_RAMP = 0.55;
 const SUBSTEPS = 2;
 
-const THROW_FRICTION = 0.45;
-const THROW_STOP_SPEED = 14;
-const THROW_WALL_BOUNCE = 0.86;
-const THROW_BALL_BOUNCE = 0.9;
-const THROW_SUBSTEPS = 2;
-const MOVING_EPS = 1;
+const SIM_MIN_RADIUS = 8;
+const SIM_MAX_RADIUS = 80;
+const SIZE_PULSE_PERIOD = 5;
+const SIZE_RAMP = 0.55;
+
+interface SimSizeProfile {
+  phase: number;
+  period: number;
+}
+
+let sizePulseTime = 0;
+const sizeProfileById = new Map<number, SimSizeProfile>();
+
+function randomSpawnRadius(): number {
+  return SIM_MIN_RADIUS + Math.random() * (SIM_MAX_RADIUS - SIM_MIN_RADIUS);
+}
+
+function registerSizeProfile(id: number): void {
+  sizeProfileById.set(id, {
+    phase: Math.random() * Math.PI * 2,
+    period: SIZE_PULSE_PERIOD * (0.7 + Math.random() * 0.6),
+  });
+}
+
+function syncSizeProfiles(circles: Circle[]): void {
+  const liveIds = new Set(circles.map((c) => c.id));
+  for (const id of sizeProfileById.keys()) {
+    if (!liveIds.has(id)) sizeProfileById.delete(id);
+  }
+}
+
+function targetRadiusForCircle(circle: Circle): number {
+  let profile = sizeProfileById.get(circle.id);
+  if (!profile) {
+    registerSizeProfile(circle.id);
+    profile = sizeProfileById.get(circle.id)!;
+  }
+
+  const wave = 0.5 + 0.5 * Math.sin((sizePulseTime * 2 * Math.PI) / profile.period + profile.phase);
+  return SIM_MIN_RADIUS + wave * (SIM_MAX_RADIUS - SIM_MIN_RADIUS);
+}
 
 function lerpToward(current: number, target: number, dt: number, rate: number): number {
   return current + (target - current) * (1 - Math.exp(-rate * dt));
+}
+
+function updateSimulationSizes(
+  circles: Circle[],
+  arena: ArenaSize,
+  dt: number,
+  selectedId: number | null,
+): void {
+  sizePulseTime += dt;
+  syncSizeProfiles(circles);
+
+  for (const c of circles) {
+    if (c.id === selectedId) continue;
+
+    const target = targetRadiusForCircle(c);
+    const desired = Math.min(
+      SIM_MAX_RADIUS,
+      Math.max(SIM_MIN_RADIUS, lerpToward(c.radius, target, dt, SIZE_RAMP)),
+    );
+
+    if (Math.abs(desired - c.radius) < 0.05) continue;
+
+    const probe = { ...c, radius: desired };
+    if (canPlaceAt(probe, probe.x, probe.y, circles, arena.width, arena.height)) {
+      c.radius = desired;
+      continue;
+    }
+
+    const partial = c.radius + (desired - c.radius) * 0.5;
+    const partialProbe = { ...c, radius: partial };
+    if (
+      partial !== c.radius &&
+      canPlaceAt(partialProbe, partialProbe.x, partialProbe.y, circles, arena.width, arena.height)
+    ) {
+      c.radius = partial;
+    }
+  }
 }
 
 function randomVelocity(): { vx: number; vy: number } {
@@ -82,7 +155,7 @@ export function createCircle(
   colorIndex: number,
   radius?: number,
 ): Circle {
-  const r = radius ?? MIN_RADIUS + Math.random() * (MAX_RADIUS - MIN_RADIUS);
+  const r = radius ?? randomSpawnRadius();
   const margin = r + 4;
   const x = margin + Math.random() * (arena.width - margin * 2);
   const y = margin + Math.random() * (arena.height - margin * 2);
@@ -91,6 +164,7 @@ export function createCircle(
   const idx = ((colorIndex % PALETTE.length) + PALETTE.length) % PALETTE.length;
   const color = PALETTE[idx];
 
+  registerSizeProfile(id);
   return { id, x, y, vx, vy, radius: r, r: color.r, g: color.g, b: color.b, a: 1 };
 }
 
@@ -111,14 +185,27 @@ export function unfreezeCircles(circles: Circle[]): void {
   }
 }
 
-export function stepSimulation(circles: Circle[], arena: ArenaSize, dt: number): void {
+export function stepSimulation(
+  circles: Circle[],
+  arena: ArenaSize,
+  dt: number,
+  selectedId: number | null = null,
+): void {
   const subDt = dt / SUBSTEPS;
 
   for (let step = 0; step < SUBSTEPS; step++) {
     smoothSteering(circles, subDt);
+    updateSimulationSizes(circles, arena, subDt, selectedId);
     integrate(circles, arena, subDt);
   }
 }
+
+const THROW_FRICTION = 0.45;
+const THROW_STOP_SPEED = 14;
+const THROW_WALL_BOUNCE = 0.86;
+const THROW_BALL_BOUNCE = 0.9;
+const THROW_SUBSTEPS = 2;
+const MOVING_EPS = 1;
 
 export function stepEditThrows(
   circles: Circle[],

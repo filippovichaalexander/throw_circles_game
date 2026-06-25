@@ -279,7 +279,7 @@ class App {
     this.lastTime = now;
 
     if (this.mode === 'simulation') {
-      stepSimulation(this.circles, this.arena, dt);
+      stepSimulation(this.circles, this.arena, dt, this.selectedId);
     } else {
       stepEditThrows(this.circles, this.arena, dt, this.input.getDragId());
       this.input.update(dt);
