@@ -1,4 +1,10 @@
-import { resolveCircleCollision, resolveWallCollision } from './collision';
+import {
+  circleSpeed,
+  resolveCircleCollision,
+  resolveCircleCollisionAgainstStatic,
+  resolveWallCollision,
+  resolveWallCollisionBounce,
+} from './collision';
 import type { ArenaSize, Circle } from './types';
 import { MAX_RADIUS, MIN_RADIUS, PALETTE } from './types';
 
@@ -8,6 +14,13 @@ const MAX_SPEED = 175;
 const STEER_STRENGTH = 1.4;
 const SPEED_RAMP = 0.55;
 const SUBSTEPS = 2;
+
+const THROW_FRICTION = 0.45;
+const THROW_STOP_SPEED = 14;
+const THROW_WALL_BOUNCE = 0.86;
+const THROW_BALL_BOUNCE = 0.9;
+const THROW_SUBSTEPS = 2;
+const MOVING_EPS = 1;
 
 function lerpToward(current: number, target: number, dt: number, rate: number): number {
   return current + (target - current) * (1 - Math.exp(-rate * dt));
@@ -104,5 +117,64 @@ export function stepSimulation(circles: Circle[], arena: ArenaSize, dt: number):
   for (let step = 0; step < SUBSTEPS; step++) {
     smoothSteering(circles, subDt);
     integrate(circles, arena, subDt);
+  }
+}
+
+export function stepEditThrows(
+  circles: Circle[],
+  arena: ArenaSize,
+  dt: number,
+  heldId: number | null = null,
+): void {
+  const subDt = dt / THROW_SUBSTEPS;
+
+  for (let step = 0; step < THROW_SUBSTEPS; step++) {
+    for (const c of circles) {
+      if (c.id === heldId) continue;
+
+      const speed = circleSpeed(c);
+      if (speed < MOVING_EPS) {
+        c.vx = 0;
+        c.vy = 0;
+        continue;
+      }
+
+      c.x += c.vx * subDt;
+      c.y += c.vy * subDt;
+      resolveWallCollisionBounce(c, arena.width, arena.height, THROW_WALL_BOUNCE);
+
+      const nextSpeed = Math.max(0, speed - THROW_FRICTION * speed * subDt);
+      if (nextSpeed < THROW_STOP_SPEED) {
+        c.vx = 0;
+        c.vy = 0;
+      } else {
+        c.vx = (c.vx / speed) * nextSpeed;
+        c.vy = (c.vy / speed) * nextSpeed;
+      }
+    }
+
+    for (let i = 0; i < circles.length; i++) {
+      for (let j = i + 1; j < circles.length; j++) {
+        const a = circles[i];
+        const b = circles[j];
+        if (a.id === heldId || b.id === heldId) continue;
+
+        const aSpeed = circleSpeed(a);
+        const bSpeed = circleSpeed(b);
+
+        if (aSpeed < MOVING_EPS && bSpeed < MOVING_EPS) continue;
+
+        if (aSpeed >= MOVING_EPS && bSpeed >= MOVING_EPS) {
+          resolveCircleCollision(a, b);
+        } else if (aSpeed >= MOVING_EPS) {
+          resolveCircleCollisionAgainstStatic(a, b, THROW_BALL_BOUNCE);
+        } else {
+          resolveCircleCollisionAgainstStatic(b, a, THROW_BALL_BOUNCE);
+        }
+
+        resolveWallCollisionBounce(a, arena.width, arena.height, THROW_WALL_BOUNCE);
+        resolveWallCollisionBounce(b, arena.width, arena.height, THROW_WALL_BOUNCE);
+      }
+    }
   }
 }

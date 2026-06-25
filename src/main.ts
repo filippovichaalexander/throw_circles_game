@@ -1,5 +1,5 @@
 import { InputController } from './input';
-import { createCircle, freezeCircles, stepSimulation, unfreezeCircles } from './physics';
+import { createCircle, freezeCircles, stepEditThrows, stepSimulation, unfreezeCircles } from './physics';
 import { WebGLRenderer } from './renderer';
 import type { AppMode, ArenaSize, Circle } from './types';
 import { MAX_CIRCLES, MIN_CIRCLES, PALETTE } from './types';
@@ -71,6 +71,13 @@ class App {
           circle.y = y;
         }
       },
+      onThrowRelease: (id, vx, vy) => {
+        const circle = this.circles.find((c) => c.id === id);
+        if (circle) {
+          circle.vx = vx;
+          circle.vy = vy;
+        }
+      },
       getMode: () => this.mode,
       getCircles: () => this.circles,
       getSelectedId: () => this.selectedId,
@@ -140,6 +147,7 @@ class App {
     if (this.mode === 'simulation') {
       stepSimulation(this.circles, this.arena, dt);
     } else {
+      stepEditThrows(this.circles, this.arena, dt, this.input.getDragId());
       this.input.update(dt);
     }
 

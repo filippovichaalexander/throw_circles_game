@@ -1,6 +1,16 @@
 import { circleSpeed, resolveMovement } from './collision';
 import type { AppMode, ArenaSize, Circle } from './types';
 
+const MIN_THROW_SPEED = 55;
+const MAX_THROW_SPEED = 820;
+const DRAG_SAMPLE_LIMIT = 6;
+
+interface DragSample {
+  x: number;
+  y: number;
+  t: number;
+}
+
 const MOVING_CATCH_SPEED = 20;
 const MOVING_CATCH_SCALE = 1.35;
 
@@ -40,6 +50,7 @@ export interface InputHandlers {
   onSelect: (id: number | null) => void;
   onDragStart: (id: number) => void;
   onDragMove: (id: number, x: number, y: number) => void;
+  onThrowRelease: (id: number, vx: number, vy: number) => void;
   getMode: () => AppMode;
   getCircles: () => Circle[];
   getSelectedId: () => number | null;
@@ -53,6 +64,7 @@ export class InputController {
   private dragId: number | null = null;
   private dragOffsetX = 0;
   private dragOffsetY = 0;
+  private dragSamples: DragSample[] = [];
   private keys = new Set<string>();
   private keyboardSpeed = 220;
 
@@ -68,6 +80,10 @@ export class InputController {
     canvas.addEventListener('touchend', this.onTouchEnd);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+  }
+
+  getDragId(): number | null {
+    return this.dragging ? this.dragId : null;
   }
 
   update(dt: number): void {
@@ -174,14 +190,48 @@ export class InputController {
     }
     this.dragging = true;
     this.dragId = id;
+    this.dragSamples = [];
     this.handlers.onDragStart(id);
   }
 
   private endDrag(): void {
+    if (this.dragging && this.dragId !== null && this.handlers.getMode() === 'edit') {
+      const velocity = this.computeThrowVelocity();
+      if (velocity) {
+        this.handlers.onThrowRelease(this.dragId, velocity.vx, velocity.vy);
+      }
+    }
     this.dragging = false;
     this.dragId = null;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
+    this.dragSamples = [];
+  }
+
+  private recordDragSample(x: number, y: number): void {
+    this.dragSamples.push({ x, y, t: performance.now() });
+    if (this.dragSamples.length > DRAG_SAMPLE_LIMIT) {
+      this.dragSamples.shift();
+    }
+  }
+
+  private computeThrowVelocity(): { vx: number; vy: number } | null {
+    if (this.dragSamples.length < 2) return null;
+
+    const first = this.dragSamples[0];
+    const last = this.dragSamples[this.dragSamples.length - 1];
+    const dt = (last.t - first.t) / 1000;
+    if (dt < 0.02) return null;
+
+    let vx = (last.x - first.x) / dt;
+    let vy = (last.y - first.y) / dt;
+    const speed = Math.hypot(vx, vy);
+    if (speed < MIN_THROW_SPEED) return null;
+
+    const scale = Math.min(1, MAX_THROW_SPEED / speed);
+    vx *= scale;
+    vy *= scale;
+    return { vx, vy };
   }
 
   private moveDragged(cursorX: number, cursorY: number): void {
@@ -197,5 +247,6 @@ export class InputController {
     const dy = targetY - circle.y;
     const pos = resolveMovement(circle, dx, dy, circles, arena.width, arena.height);
     this.handlers.onDragMove(this.dragId, pos.x, pos.y);
+    this.recordDragSample(pos.x, pos.y);
   }
 }

@@ -106,6 +106,32 @@ export function resolveCircleCollision(a: Circle, b: Circle): void {
   b.vy += impulse * ny;
 }
 
+export function resolveCircleCollisionAgainstStatic(
+  mover: Circle,
+  other: Circle,
+  bounce = 0.9,
+): void {
+  const dx = other.x - mover.x;
+  const dy = other.y - mover.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = mover.radius + other.radius;
+
+  if (dist === 0 || dist >= minDist) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+  const overlap = minDist - dist;
+
+  mover.x -= nx * overlap;
+  mover.y -= ny * overlap;
+
+  const dot = mover.vx * nx + mover.vy * ny;
+  if (dot > 0) {
+    mover.vx -= (1 + bounce) * dot * nx;
+    mover.vy -= (1 + bounce) * dot * ny;
+  }
+}
+
 export function resolveWallCollision(circle: Circle, width: number, height: number): void {
   if (circle.x - circle.radius < 0) {
     circle.x = circle.radius;
@@ -122,5 +148,29 @@ export function resolveWallCollision(circle: Circle, width: number, height: numb
   if (circle.y + circle.radius > height) {
     circle.y = height - circle.radius;
     circle.vy = -Math.abs(circle.vy);
+  }
+}
+
+export function resolveWallCollisionBounce(
+  circle: Circle,
+  width: number,
+  height: number,
+  bounce: number,
+): void {
+  if (circle.x - circle.radius < 0) {
+    circle.x = circle.radius;
+    circle.vx = Math.abs(circle.vx) * bounce;
+  }
+  if (circle.x + circle.radius > width) {
+    circle.x = width - circle.radius;
+    circle.vx = -Math.abs(circle.vx) * bounce;
+  }
+  if (circle.y - circle.radius < 0) {
+    circle.y = circle.radius;
+    circle.vy = Math.abs(circle.vy) * bounce;
+  }
+  if (circle.y + circle.radius > height) {
+    circle.y = height - circle.radius;
+    circle.vy = -Math.abs(circle.vy) * bounce;
   }
 }
