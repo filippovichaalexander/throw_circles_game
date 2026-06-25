@@ -1,6 +1,12 @@
 import { canPlaceAt } from './collision';
 import { InputController } from './input';
-import { createCircle, freezeCircles, stepEditThrows, stepSimulation, unfreezeCircles } from './physics';
+import {
+  createCircle,
+  freezeCircles,
+  stepEditThrows,
+  stepSimulation,
+  unfreezeCircles,
+} from './physics';
 import { WebGLRenderer } from './renderer';
 import type { AppMode, ArenaSize, Circle } from './types';
 import {
@@ -16,21 +22,27 @@ import {
   TRANSPARENT_ALPHA,
 } from './types';
 import { bindUI, updateHintUI, updatePaletteUI, updateSelectionUI, type UIElements } from './ui';
-import './styles.css';
 
 function computeArenaSize(): ArenaSize {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  const minArea = vw * vh * 0.5;
   const aspect = 4 / 3;
-  let width = Math.min(vw - 32, 800);
-  let height = Math.floor(width / aspect);
-  if (height > vh * 0.62) {
-    height = Math.floor(vh * 0.62);
-    width = Math.floor(height * aspect);
+  let height = Math.sqrt(minArea / aspect);
+  let width = height * aspect;
+  const maxW = vw - 32;
+  const maxH = vh * 0.62;
+  if (width > maxW) {
+    width = maxW;
+    height = width / aspect;
+  }
+  if (height > maxH) {
+    height = maxH;
+    width = height * aspect;
   }
   return {
-    width: Math.max(320, width),
-    height: Math.max(240, height),
+    width: Math.max(320, Math.floor(width)),
+    height: Math.max(240, Math.floor(height)),
   };
 }
 
@@ -65,6 +77,7 @@ class App {
       hasPendingPaletteColor: () => this.pendingAddColorIndex !== null,
       onTransparent: () => this.makeTransparent(),
     });
+    updateHintUI(this.ui, this.mode);
 
     this.input = new InputController(this.canvas, {
       onSelect: (id) => {
@@ -99,14 +112,11 @@ class App {
       getArena: () => this.arena,
     });
 
-    updateHintUI(this.ui, this.mode);
-    this.refreshSelectionUI();
-
     window.addEventListener('resize', () => this.handleResize());
     this.handleResize();
     this.seedCircles(MIN_CIRCLES);
     this.lastTime = performance.now();
-    requestAnimationFrame((t) => this.loop(t));
+    this.loop(this.lastTime);
   }
 
   private seedCircles(count: number): void {
@@ -152,7 +162,7 @@ class App {
     this.arena = computeArenaSize();
     this.wrap.style.width = `${this.arena.width}px`;
     this.wrap.style.height = `${this.arena.height}px`;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.resize(this.arena.width, this.arena.height, dpr);
 
     for (const c of this.circles) {
@@ -169,7 +179,6 @@ class App {
     } else {
       unfreezeCircles(this.circles);
     }
-    updateHintUI(this.ui, mode);
   }
 
   private addCircle(): void {
@@ -295,9 +304,9 @@ class App {
 function main(): void {
   try {
     new App();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    document.body.innerHTML = `<p class="error">Ошибка запуска: ${message}</p>`;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    document.body.innerHTML = `<p class="error">Ошибка запуска: ${msg}</p>`;
   }
 }
 
