@@ -1,6 +1,6 @@
 # Circle Physics Simulation
 
-Двухмерная физическая симуляция круговых объектов на TypeScript, с отрисовкой через **WebGL2**.
+Circles simulation 2D with Typescript and **WebGL2**.
 
 ## Запуск
 
@@ -9,4 +9,13 @@ npm install
 npm run dev
 ```
 
-Сборка: `npm run build`, предпросмотр: `npm run preview`.
+Types check: `npm run typecheck`, Build: `npm run build`, Local CI run: `npm run ci`, Preview: `npm run preview`.
+
+## CI
+
+`GitHub Actions` workflow:
+
+- `push` to `main` / `master`
+- each action `pull_request`
+- steps: `npm ci` -> `npm run ci`
+- after built - published dir -> `dist`
