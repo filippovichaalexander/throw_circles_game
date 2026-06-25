@@ -32,5 +32,6 @@ export const PALETTE: ReadonlyArray<{ r: number; g: number; b: number; label: st
   { r: 0.61, g: 0.15, b: 0.69, label: 'Фиолетовый' },
 ];
 
-// TODO 
-// прозрачный стиль
+export function isTransparentCircle(circle: Circle): boolean {
+  return circle.a < 0.999;
+}
