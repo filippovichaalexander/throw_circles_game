@@ -32,6 +32,11 @@ export const PALETTE: ReadonlyArray<{ r: number; g: number; b: number; label: st
   { r: 0.61, g: 0.15, b: 0.69, label: 'Фиолетовый' },
 ];
 
+export const TRANSPARENT_ALPHA = 0.5;
+export const MIN_TRANSPARENT_ALPHA = 0.1;
+export const MAX_TRANSPARENT_ALPHA = 0.95;
+export const ALPHA_WHEEL_STEP = 0.05;
+
 export function isTransparentCircle(circle: Circle): boolean {
   return circle.a < 0.999;
 }
