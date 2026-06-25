@@ -1,8 +1,9 @@
+import { canPlaceAt } from './collision';
 import { InputController } from './input';
 import { createCircle, freezeCircles, stepEditThrows, stepSimulation, unfreezeCircles } from './physics';
 import { WebGLRenderer } from './renderer';
 import type { AppMode, ArenaSize, Circle } from './types';
-import { MAX_CIRCLES, MIN_CIRCLES, PALETTE } from './types';
+import { MAX_CIRCLES, MAX_RADIUS, MIN_CIRCLES, MIN_RADIUS, PALETTE, SIZE_FACTOR } from './types';
 import { bindUI, updateHintUI, updateSelectionUI, type UIElements } from './ui';
 import './styles.css';
 
@@ -44,8 +45,8 @@ class App {
       onModeChange: (mode) => this.setMode(mode),
       onAdd: () => {},
       onDelete: () => {},
-      onGrow: () => {},
-      onShrink: () => {},
+      onGrow: () => this.resizeSelected(SIZE_FACTOR),
+      onShrink: () => this.resizeSelected(1 / SIZE_FACTOR),
       onPaletteToggle: () => {},
       onPaletteClear: () => {},
       hasPendingPaletteColor: () => false,
@@ -106,6 +107,14 @@ class App {
     this.refreshSelectionUI();
   }
 
+  private canResizeSelected(factor: number): boolean {
+    if (this.selectedId === null) return false;
+    const circle = this.circles.find((c) => c.id === this.selectedId);
+    if (!circle) return false;
+    const newRadius = Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, circle.radius * factor));
+    return newRadius !== circle.radius;
+  }
+
   private refreshSelectionUI(): void {
     updateSelectionUI(
       this.ui,
@@ -113,6 +122,8 @@ class App {
       this.circles.length,
       MIN_CIRCLES,
       MAX_CIRCLES,
+      this.canResizeSelected(SIZE_FACTOR),
+      this.canResizeSelected(1 / SIZE_FACTOR),
     );
   }
 
@@ -138,6 +149,22 @@ class App {
       unfreezeCircles(this.circles);
     }
     updateHintUI(this.ui, mode);
+  }
+
+  private resizeSelected(factor: number): void {
+    if (this.selectedId === null) return;
+    const circle = this.circles.find((c) => c.id === this.selectedId);
+    if (!circle) return;
+
+    const newRadius = Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, circle.radius * factor));
+    if (newRadius === circle.radius) return;
+
+    const probe = { ...circle, radius: newRadius };
+    if (!canPlaceAt(probe, probe.x, probe.y, this.circles, this.arena.width, this.arena.height)) {
+      return;
+    }
+    circle.radius = newRadius;
+    this.refreshSelectionUI();
   }
 
   private loop(now: number): void {
