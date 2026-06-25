@@ -1,5 +1,6 @@
 import { circleSpeed, resolveMovement } from './collision';
 import type { AppMode, ArenaSize, Circle } from './types';
+import { isTransparentCircle } from './types';
 
 const MIN_THROW_SPEED = 55;
 const MAX_THROW_SPEED = 820;
@@ -51,6 +52,7 @@ export interface InputHandlers {
   onDragStart: (id: number) => void;
   onDragMove: (id: number, x: number, y: number) => void;
   onThrowRelease: (id: number, vx: number, vy: number) => void;
+  onOpacityAdjust: (id: number, direction: number) => void;
   getMode: () => AppMode;
   getCircles: () => Circle[];
   getSelectedId: () => number | null;
@@ -80,6 +82,7 @@ export class InputController {
     canvas.addEventListener('touchend', this.onTouchEnd);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+    canvas.addEventListener('wheel', this.onWheel, { passive: false });
   }
 
   getDragId(): number | null {
@@ -177,6 +180,18 @@ export class InputController {
 
   private onKeyUp = (e: KeyboardEvent): void => {
     this.keys.delete(e.key);
+  };
+
+  private onWheel = (e: WheelEvent): void => {
+    const id = this.handlers.getSelectedId();
+    if (id === null) return;
+
+    const circle = this.handlers.getCircles().find((c) => c.id === id);
+    if (!circle || !isTransparentCircle(circle)) return;
+
+    e.preventDefault();
+    const direction = e.deltaY < 0 ? 1 : -1;
+    this.handlers.onOpacityAdjust(id, direction);
   };
 
   private beginDrag(id: number, grabX: number, grabY: number): void {
