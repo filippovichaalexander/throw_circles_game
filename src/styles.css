@@ -27,6 +27,20 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
   background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--accent));
+  background-size: 400% 400%;
+  animation: gradientShift 24s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 #app {
@@ -92,9 +106,36 @@ body {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(
+      125deg,
+      rgba(201, 211, 235, 0.94) 0%,
+      rgba(57, 87, 191, 0.97) 28%,
+      rgba(95, 72, 105, 0.9) 63%,
+      rgba(57, 77, 73, 0.9) 100%
+    );
+  background-size: 260% 260%;
+  animation: arenaGradientLoop 32s ease-in-out infinite;
   min-width: 280px;
   min-height: 210px;
+}
+
+@keyframes arenaGradientLoop {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 35%;
+  }
+  50% {
+    background-position: 85% 100%;
+  }
+  75% {
+    background-position: 10% 70%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 #arena {
