@@ -143,6 +143,7 @@ export class WebGLRenderer {
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+    // stride: xy, radius, rgba, selected
     const stride = 8 * 4;
     const iPos = gl.getAttribLocation(program, 'a_instancePos');
     const iRad = gl.getAttribLocation(program, 'a_instanceRadius');
@@ -168,6 +169,7 @@ export class WebGLRenderer {
     gl.bindVertexArray(null);
 
     gl.enable(gl.BLEND);
+    // прозрачные круги корректно с фоном арены
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
 

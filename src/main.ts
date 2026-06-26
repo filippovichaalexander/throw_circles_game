@@ -23,6 +23,7 @@ import {
 } from './types';
 import { bindUI, updateHintUI, updatePaletteUI, updateSelectionUI, type UIElements } from './ui';
 
+// Логический размер арены, aspect 4:3, ограничения по viewport
 function computeArenaSize(): ArenaSize {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -46,6 +47,7 @@ function computeArenaSize(): ArenaSize {
   };
 }
 
+// Оркестратор
 class App {
   private canvas: HTMLCanvasElement;
   private wrap: HTMLElement;
@@ -58,6 +60,7 @@ class App {
   private selectedId: number | null = null;
   private arena: ArenaSize = { width: 800, height: 600 };
   private lastTime = 0;
+  // Цвет из палитры для следующего «Добавить»; null — авто-ротация по PALETTE
   private pendingAddColorIndex: number | null = null;
   private nextSequentialColorIndex = 0;
 
@@ -162,6 +165,7 @@ class App {
     this.arena = computeArenaSize();
     this.wrap.style.width = `${this.arena.width}px`;
     this.wrap.style.height = `${this.arena.height}px`;
+    //  не поднимать разрешение выше 2×, даже если экран DPR = 3.
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.resize(this.arena.width, this.arena.height, dpr);
 
@@ -250,6 +254,7 @@ class App {
     }
     updatePaletteUI(this.ui, this.pendingAddColorIndex);
 
+    // Перекраска выбранного кружка - только если он уже был выбран до клика по палитре
     if (this.selectedId !== null) {
       this.applyColorToSelected(index);
     }

@@ -14,10 +14,12 @@ const MIN_SPEED = 85;
 const MAX_SPEED = 175;
 const STEER_STRENGTH = 1.4;
 const SPEED_RAMP = 0.55;
+// Дробление шага при коллизии
 const SUBSTEPS = 2;
 
 const SIM_MIN_RADIUS = 8;
 const SIM_MAX_RADIUS = 80;
+// Базовый цикл
 const SIZE_PULSE_PERIOD = 5;
 const SIZE_RAMP = 0.55;
 
@@ -88,6 +90,7 @@ function updateSimulationSizes(
       continue;
     }
 
+    // Частичный шаг для просчета коллизии при изменении размера радиуса
     const partial = c.radius + (desired - c.radius) * 0.5;
     const partialProbe = { ...c, radius: partial };
     if (
@@ -99,15 +102,18 @@ function updateSimulationSizes(
   }
 }
 
+// случайный угол и скорость
 function randomVelocity(): { vx: number; vy: number } {
   const angle = Math.random() * Math.PI * 2;
   const speed = 80 + Math.random() * 120;
+  // новый угол и скорость
   return {
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
   };
 }
 
+// скорость кругов
 function smoothSteering(circles: Circle[], dt: number): void {
   const time = performance.now() * 0.00035;
 
@@ -133,6 +139,7 @@ function smoothSteering(circles: Circle[], dt: number): void {
   }
 }
 
+// схема физики: позиция - стены - попарные столкновения
 function integrate(circles: Circle[], arena: ArenaSize, dt: number): void {
   for (const c of circles) {
     c.x += c.vx * dt;
@@ -211,8 +218,10 @@ export function stepEditThrows(
   circles: Circle[],
   arena: ArenaSize,
   dt: number,
+  // конкретный круг
   heldId: number | null = null,
 ): void {
+  // дробление шага
   const subDt = dt / THROW_SUBSTEPS;
 
   for (let step = 0; step < THROW_SUBSTEPS; step++) {
@@ -231,6 +240,7 @@ export function stepEditThrows(
       resolveWallCollisionBounce(c, arena.width, arena.height, THROW_WALL_BOUNCE);
 
       const nextSpeed = Math.max(0, speed - THROW_FRICTION * speed * subDt);
+      // если следующая скорость меньше THROW_STOP_SPEED - круг неподвижен
       if (nextSpeed < THROW_STOP_SPEED) {
         c.vx = 0;
         c.vy = 0;
@@ -251,6 +261,7 @@ export function stepEditThrows(
 
         if (aSpeed < MOVING_EPS && bSpeed < MOVING_EPS) continue;
 
+        // если оба круга движутся - столкновение
         if (aSpeed >= MOVING_EPS && bSpeed >= MOVING_EPS) {
           resolveCircleCollision(a, b);
         } else if (aSpeed >= MOVING_EPS) {

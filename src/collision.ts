@@ -1,5 +1,6 @@
 import type { Circle } from './types';
 
+// только Narrow-phase
 export function circlesOverlap(a: Circle, b: Circle, gap = 0): boolean {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
