@@ -5,8 +5,6 @@ Circles simulation 2D with Typescript and **WebGL2**.
 ## Run / Запуск
 
 ```bash
-git switch develop
-
 npm install
 npm run dev
 ```
